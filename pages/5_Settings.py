@@ -72,6 +72,8 @@ st.markdown("Manage your account security and preferences")
 
 col1, col2 = st.columns(2)
 
+linked_wallet_display = user.get('linked_wallet_address', 'Not linked')
+
 with col1:
     st.markdown("### 👤 Account Information")
     st.markdown(f"""
@@ -81,9 +83,9 @@ with col1:
             <div style="color: #EAECEF; font-size: 1.125rem;">{user['username']}</div>
         </div>
         <div style="margin-bottom: 1rem;">
-            <div style="color: #848E9C; font-size: 0.875rem;">Wallet Address</div>
-            <div style="color: #EAECEF; font-size: 0.875rem; font-family: 'Roboto Mono', monospace; word-break: break-all;">
-                {user['wallet_address']}
+            <div style="color: #848E9C; font-size: 0.875rem;">Linked Wallet</div>
+            <div style="color: {'#F0B90B' if linked_wallet_display != 'Not linked' else '#848E9C'}; font-size: 0.875rem; font-family: 'Roboto Mono', monospace; word-break: break-all;">
+                {linked_wallet_display if linked_wallet_display else 'Not linked'}
             </div>
         </div>
         <div style="margin-bottom: 1rem;">
@@ -101,8 +103,9 @@ with col1:
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("### 📋 Copy Wallet Address")
-    st.code(user['wallet_address'], language=None)
+    if linked_wallet_display and linked_wallet_display != 'Not linked':
+        st.markdown("### 📋 Copy Wallet Address")
+        st.code(linked_wallet_display, language=None)
 
 with col2:
     st.markdown("### 🔐 Security Settings")

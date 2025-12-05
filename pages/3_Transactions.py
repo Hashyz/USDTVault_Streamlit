@@ -79,6 +79,9 @@ st.markdown("Deposit, withdraw, and track your USDT transactions")
 user_balance = Decimal(user.get('balance', '0'))
 transactions = get_user_transactions(st.session_state.user_id)
 
+linked_wallet_addr = user.get('linked_wallet_address')
+wallet_display = f"{linked_wallet_addr[:6]}...{linked_wallet_addr[-4:]}" if linked_wallet_addr else "Not linked"
+
 st.markdown(f"""
 <div class="metric-card">
     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -89,7 +92,7 @@ st.markdown(f"""
             </div>
         </div>
         <div style="color: #848E9C; font-size: 0.875rem;">
-            Wallet: {user['wallet_address'][:10]}...{user['wallet_address'][-6:]}
+            Wallet: {wallet_display}
         </div>
     </div>
 </div>

@@ -32,7 +32,7 @@ def get_db():
         init_db()
     return db
 
-def create_user(username: str, password: str, wallet_address: str = ""):
+def create_user(username: str, password: str):
     """Create a new user"""
     db = get_db()
     if db is None:
@@ -47,10 +47,10 @@ def create_user(username: str, password: str, wallet_address: str = ""):
     user = {
         "username": username.lower(),
         "password": hashed_password,
-        "wallet_address": wallet_address or f"0x{os.urandom(20).hex()}",
         "balance": "0",
         "pin": None,
         "pin_attempts": 0,
+        "linked_wallet_address": None,
         "created_at": datetime.utcnow()
     }
     
@@ -303,94 +303,3 @@ def update_user_wallet_address(user_id: str, wallet_address: str | None):
     )
     return result.modified_count > 0 or result.matched_count > 0
 
-def create_demo_account():
-    """Create demo account if it doesn't exist"""
-    db = get_db()
-    if db is None:
-        return None
-    
-    demo_user = db.users.find_one({"username": "demo"})
-    if demo_user:
-        return demo_user
-    
-    hashed_password = bcrypt.hashpw("demo1234".encode('utf-8'), bcrypt.gensalt())
-    hashed_pin = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
-    
-    demo = {
-        "username": "demo",
-        "password": hashed_password,
-        "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4",
-        "balance": "12548.75",
-        "pin": hashed_pin,
-        "pin_attempts": 0,
-        "created_at": datetime.utcnow()
-    }
-    
-    result = db.users.insert_one(demo)
-    demo["_id"] = result.inserted_id
-    
-    db.transactions.insert_many([
-        {
-            "user_id": str(demo["_id"]),
-            "type": "receive",
-            "amount": "10000.00",
-            "address": "0x1234567890abcdef1234567890abcdef12345678",
-            "status": "completed",
-            "created_at": datetime(2024, 1, 15, 10, 30)
-        },
-        {
-            "user_id": str(demo["_id"]),
-            "type": "receive",
-            "amount": "3000.00",
-            "address": "0xabcdef1234567890abcdef1234567890abcdef12",
-            "status": "completed",
-            "created_at": datetime(2024, 2, 20, 14, 45)
-        },
-        {
-            "user_id": str(demo["_id"]),
-            "type": "send",
-            "amount": "451.25",
-            "address": "0x9876543210fedcba9876543210fedcba98765432",
-            "status": "completed",
-            "created_at": datetime(2024, 3, 5, 9, 15)
-        }
-    ])
-    
-    db.savings_goals.insert_many([
-        {
-            "user_id": str(demo["_id"]),
-            "title": "Emergency Fund",
-            "current": "5000.00",
-            "target": "10000.00",
-            "deadline": datetime(2024, 12, 31),
-            "auto_save_enabled": True,
-            "auto_save_amount": "500.00",
-            "auto_save_frequency": "monthly",
-            "saving_streak": "3",
-            "created_at": datetime.utcnow()
-        },
-        {
-            "user_id": str(demo["_id"]),
-            "title": "Vacation Fund",
-            "current": "1200.00",
-            "target": "3000.00",
-            "deadline": datetime(2024, 8, 15),
-            "auto_save_enabled": False,
-            "auto_save_amount": None,
-            "auto_save_frequency": None,
-            "saving_streak": "0",
-            "created_at": datetime.utcnow()
-        }
-    ])
-    
-    db.investment_plans.insert_one({
-        "user_id": str(demo["_id"]),
-        "name": "Weekly DCA",
-        "amount": "100.00",
-        "frequency": "weekly",
-        "next_contribution": datetime(2024, 4, 15),
-        "auto_invest": True,
-        "created_at": datetime.utcnow()
-    })
-    
-    return demo

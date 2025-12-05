@@ -53,8 +53,8 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 ### Data Models
 
 **User**
-- username, password (hashed), wallet_address
-- balance, pin (hashed)
+- username, password (hashed)
+- balance, pin (hashed), linked_wallet_address
 - created_at timestamp
 
 **Transaction**
@@ -78,14 +78,11 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 
 2. The app will automatically start on port 5000
 
-## Demo Account
+## Getting Started
 
-- **Username**: `demo`
-- **Password**: `demo1234`
-- **PIN**: `123456`
-- **Initial Balance**: $12,548.75 USDT
-
-The demo account includes sample transactions, savings goals, and investment plans for testing.
+1. Register a new account with username and password
+2. Link your real BSC wallet address in Settings to view blockchain balances
+3. Set up a PIN for added security on withdrawals
 
 ## Color Palette
 

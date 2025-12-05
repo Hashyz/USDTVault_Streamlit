@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.database import authenticate_user, create_user, get_user_by_id, create_demo_account
+from utils.database import authenticate_user, create_user, get_user_by_id
 
 def init_session_state():
     """Initialize session state variables"""
@@ -54,13 +54,3 @@ def require_auth():
         st.switch_page("app.py")
         return False
     return True
-
-def demo_login() -> tuple[bool, str]:
-    """Login with demo account"""
-    demo_user = create_demo_account()
-    if demo_user:
-        st.session_state.authenticated = True
-        st.session_state.user_id = str(demo_user["_id"])
-        st.session_state.username = demo_user["username"]
-        return True, "Demo login successful! PIN: 123456"
-    return False, "Failed to create demo account"

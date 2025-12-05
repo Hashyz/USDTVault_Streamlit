@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from utils.database import init_db, get_db
-from utils.auth import init_session_state, login, register, logout, demo_login
+from utils.auth import init_session_state, login, register, logout
 
 st.set_page_config(
     page_title="USDT Vault Pro",
@@ -59,16 +59,6 @@ st.markdown("""
     .stButton > button:hover {
         background: linear-gradient(135deg, #FFD93D 0%, #F0B90B 100%);
         box-shadow: 0 4px 15px rgba(240, 185, 11, 0.3);
-    }
-    
-    .demo-btn > button {
-        background: transparent;
-        border: 2px solid #F0B90B;
-        color: #F0B90B;
-    }
-    
-    .demo-btn > button:hover {
-        background: rgba(240, 185, 11, 0.1);
     }
     
     .stTextInput > div > div > input {
@@ -147,7 +137,6 @@ else:
     
     if not db_connected:
         st.warning("⚠️ MongoDB not connected. Please add your MONGODB_URI to Secrets to enable full functionality.")
-        st.info("Demo mode available - data will not persist without database connection.")
     
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     
@@ -156,11 +145,8 @@ else:
         with st.form("login_form"):
             username = st.text_input("Username", placeholder="Enter your username")
             password = st.text_input("Password", type="password", placeholder="Enter your password")
-            col1, col2 = st.columns(2)
-            with col1:
-                login_btn = st.form_submit_button("Login", use_container_width=True)
-            with col2:
-                demo_btn = st.form_submit_button("Try Demo", use_container_width=True)
+            
+            login_btn = st.form_submit_button("Login", use_container_width=True)
             
             if login_btn:
                 if username and password:
@@ -172,17 +158,6 @@ else:
                         st.error(message)
                 else:
                     st.warning("Please enter username and password")
-            
-            if demo_btn:
-                if db_connected:
-                    success, message = demo_login()
-                    if success:
-                        st.success(message)
-                        st.rerun()
-                    else:
-                        st.error(message)
-                else:
-                    st.error("Demo requires database connection")
     
     with tab2:
         st.markdown("### Create Account")
@@ -212,7 +187,6 @@ else:
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #848E9C; font-size: 0.875rem;">
-        <p><strong>Demo Account:</strong> username: <code>demo</code> | password: <code>demo1234</code> | PIN: <code>123456</code></p>
         <p>Built for BEP20 USDT on Binance Smart Chain</p>
     </div>
     """, unsafe_allow_html=True)

@@ -137,7 +137,11 @@ if not user:
 
 with st.sidebar:
     st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**Wallet:** `{user['wallet_address'][:10]}...{user['wallet_address'][-6:]}`")
+    linked_addr = user.get('linked_wallet_address')
+    if linked_addr:
+        st.markdown(f"**Wallet:** `{linked_addr[:6]}...{linked_addr[-4:]}`")
+    else:
+        st.markdown("**Wallet:** `Not linked`")
     st.markdown("---")
     
     if st.button("📊 Dashboard", use_container_width=True):
