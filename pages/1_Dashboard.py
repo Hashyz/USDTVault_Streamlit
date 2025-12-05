@@ -137,9 +137,19 @@ user = get_current_user()
 if not user:
     st.switch_page("app.py")
 
+linked_addr = user.get('linked_wallet_address')
+sidebar_balance_display = "Link wallet to view"
+if linked_addr:
+    sidebar_blockchain_balance = get_wallet_balance(linked_addr)
+    if sidebar_blockchain_balance:
+        sidebar_usdt = Decimal(sidebar_blockchain_balance.get('usdt', '0'))
+        sidebar_balance_display = f"${sidebar_usdt:,.2f}"
+    else:
+        sidebar_balance_display = "Unable to fetch"
+
 with st.sidebar:
     st.markdown(f"### 👤 {user['username'].title()}")
-    linked_addr = user.get('linked_wallet_address')
+    st.markdown(f"**USDT Balance:** `{sidebar_balance_display}`")
     if linked_addr:
         st.markdown(f"**Wallet:** `{linked_addr[:6]}...{linked_addr[-4:]}`")
     else:
@@ -191,14 +201,42 @@ else:
     col_received, col_sent, col_savings = col2, col3, col4
 
 with col1:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="section-label">App Balance</div>
-        <div class="metric-label">💰 Total Balance</div>
-        <div class="metric-value">${balance:,.2f}</div>
-        <div class="metric-change">USDT (BEP20)</div>
-    </div>
-    """, unsafe_allow_html=True)
+    if linked_wallet and blockchain_balances and not blockchain_error:
+        main_usdt_balance = Decimal(blockchain_balances['usdt'])
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="section-label">Wallet Balance</div>
+            <div class="metric-label">💰 USDT Balance</div>
+            <div class="metric-value">${main_usdt_balance:,.2f}</div>
+            <div class="metric-change">USDT (BEP20)</div>
+        </div>
+        """, unsafe_allow_html=True)
+    elif linked_wallet and blockchain_error:
+        st.markdown(f"""
+        <div class="error-card">
+            <div class="section-label">Wallet Balance</div>
+            <div class="metric-label">💰 USDT Balance</div>
+            <div style="color: #F6465D; font-size: 1.25rem; margin: 0.5rem 0;">
+                ⚠️ Unable to fetch
+            </div>
+            <div style="color: #848E9C; font-size: 0.75rem;">
+                Network issue. Please refresh.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="section-label">Wallet Balance</div>
+            <div class="metric-label">💰 USDT Balance</div>
+            <div style="color: #848E9C; font-size: 1.25rem; margin: 0.5rem 0;">
+                Link wallet to view
+            </div>
+            <div style="color: #848E9C; font-size: 0.75rem;">
+                Go to Settings to link your BSC wallet
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 if linked_wallet:
     with col2:

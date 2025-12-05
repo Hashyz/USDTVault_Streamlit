@@ -46,9 +46,19 @@ user = get_current_user()
 if not user:
     st.switch_page("app.py")
 
+linked_wallet_address = user.get('linked_wallet_address')
+sidebar_balance_display = "Link wallet to view"
+if linked_wallet_address:
+    sidebar_blockchain_balance = get_wallet_balance(linked_wallet_address)
+    if sidebar_blockchain_balance:
+        sidebar_usdt = Decimal(sidebar_blockchain_balance.get('usdt', '0'))
+        sidebar_balance_display = f"${sidebar_usdt:,.2f}"
+    else:
+        sidebar_balance_display = "Unable to fetch"
+
 with st.sidebar:
     st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**Balance:** `${Decimal(user.get('balance', '0')):,.2f}`")
+    st.markdown(f"**USDT Balance:** `{sidebar_balance_display}`")
     st.markdown("---")
     
     if st.button("📊 Dashboard", use_container_width=True):
@@ -74,6 +84,15 @@ col1, col2 = st.columns(2)
 
 linked_wallet_display = user.get('linked_wallet_address', 'Not linked')
 
+account_balance_display = "Link wallet to view balance"
+if linked_wallet_address:
+    account_blockchain_balance = get_wallet_balance(linked_wallet_address)
+    if account_blockchain_balance:
+        account_usdt = Decimal(account_blockchain_balance.get('usdt', '0'))
+        account_balance_display = f"${account_usdt:,.2f} USDT"
+    else:
+        account_balance_display = "Unable to fetch balance"
+
 with col1:
     st.markdown("### 👤 Account Information")
     st.markdown(f"""
@@ -91,7 +110,7 @@ with col1:
         <div style="margin-bottom: 1rem;">
             <div style="color: #848E9C; font-size: 0.875rem;">Current Balance</div>
             <div style="color: #F0B90B; font-size: 1.5rem; font-weight: 700; font-family: 'Roboto Mono', monospace;">
-                ${Decimal(user.get('balance', '0')):,.2f} USDT
+                {account_balance_display}
             </div>
         </div>
         <div>

@@ -2,13 +2,25 @@ import streamlit as st
 from datetime import datetime
 from decimal import Decimal
 import pandas as pd
+import qrcode
+import io
+import base64
 from utils.auth import init_session_state, get_current_user, logout
 from utils.database import (
     get_user_transactions, create_transaction,
     get_user_by_id, update_user_balance,
     user_has_pin, verify_user_pin, get_pin_attempts
 )
-from utils.blockchain import get_all_transactions, format_transaction_for_display
+from utils.blockchain import get_all_transactions, format_transaction_for_display, get_wallet_balance
+
+def generate_qr_code(data):
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    return base64.b64encode(buffer.getvalue()).decode()
 
 st.set_page_config(
     page_title="Transactions - USDT Vault Pro",
@@ -52,9 +64,19 @@ user = get_current_user()
 if not user:
     st.switch_page("app.py")
 
+linked_wallet_addr = user.get('linked_wallet_address')
+sidebar_balance_display = "Link wallet to view"
+if linked_wallet_addr:
+    sidebar_blockchain_balance = get_wallet_balance(linked_wallet_addr)
+    if sidebar_blockchain_balance:
+        sidebar_usdt = Decimal(sidebar_blockchain_balance.get('usdt', '0'))
+        sidebar_balance_display = f"${sidebar_usdt:,.2f}"
+    else:
+        sidebar_balance_display = "Unable to fetch"
+
 with st.sidebar:
     st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**Balance:** `${Decimal(user.get('balance', '0')):,.2f}`")
+    st.markdown(f"**USDT Balance:** `{sidebar_balance_display}`")
     st.markdown("---")
     
     if st.button("📊 Dashboard", use_container_width=True):
@@ -74,13 +96,21 @@ with st.sidebar:
         st.switch_page("app.py")
 
 st.markdown("# 💸 Transactions")
-st.markdown("Deposit, withdraw, and track your USDT transactions")
+st.markdown("Receive and track your USDT transactions")
 
-user_balance = Decimal(user.get('balance', '0'))
 transactions = get_user_transactions(st.session_state.user_id)
 
-linked_wallet_addr = user.get('linked_wallet_address')
 wallet_display = f"{linked_wallet_addr[:6]}...{linked_wallet_addr[-4:]}" if linked_wallet_addr else "Not linked"
+
+available_balance_display = "Link wallet to view"
+blockchain_balance_data = None
+if linked_wallet_addr:
+    blockchain_balance_data = get_wallet_balance(linked_wallet_addr)
+    if blockchain_balance_data:
+        available_usdt = Decimal(blockchain_balance_data.get('usdt', '0'))
+        available_balance_display = f"${available_usdt:,.2f} USDT"
+    else:
+        available_balance_display = "Unable to fetch"
 
 st.markdown(f"""
 <div class="metric-card">
@@ -88,7 +118,7 @@ st.markdown(f"""
         <div>
             <div style="color: #848E9C; font-size: 0.875rem;">Available Balance</div>
             <div style="color: #F0B90B; font-size: 2rem; font-weight: 700; font-family: 'Roboto Mono', monospace;">
-                ${user_balance:,.2f} USDT
+                {available_balance_display}
             </div>
         </div>
         <div style="color: #848E9C; font-size: 0.875rem;">
@@ -98,120 +128,68 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["📥 Deposit", "📤 Withdraw", "📋 History", "🔗 Blockchain History"])
+tab1, tab2, tab3 = st.tabs(["📥 Receive", "📋 History", "🔗 Blockchain History"])
 
 with tab1:
-    st.markdown("### Deposit USDT")
-    st.markdown("Add funds to your wallet")
+    st.markdown("### Receive USDT")
+    st.markdown("Send USDT to this address to receive funds")
     
-    with st.form("deposit_form"):
-        deposit_amount = st.number_input(
-            "Amount (USDT)",
-            min_value=0.01,
-            value=100.0,
-            step=10.0,
-            help="Enter the amount you want to deposit"
-        )
+    if linked_wallet_addr:
+        qr_base64 = generate_qr_code(linked_wallet_addr)
         
-        source_address = st.text_input(
-            "Source Address",
-            placeholder="0x...",
-            help="Enter the wallet address you're depositing from"
-        )
+        col_qr, col_info = st.columns([1, 2])
         
-        deposit_btn = st.form_submit_button("Deposit", use_container_width=True)
+        with col_qr:
+            st.image(f"data:image/png;base64,{qr_base64}", width=200)
         
-        if deposit_btn:
-            if deposit_amount > 0 and source_address:
-                if not source_address.startswith("0x") or len(source_address) != 42:
-                    st.error("Please enter a valid wallet address (0x... format, 42 characters)")
-                else:
-                    new_balance = user_balance + Decimal(str(deposit_amount))
-                    
-                    create_transaction(
-                        st.session_state.user_id,
-                        "receive",
-                        str(deposit_amount),
-                        source_address,
-                        "completed"
-                    )
-                    
-                    update_user_balance(st.session_state.user_id, str(new_balance))
-                    
-                    st.success(f"Successfully deposited ${deposit_amount:,.2f} USDT!")
-                    st.balloons()
-                    st.rerun()
-            else:
-                st.warning("Please enter amount and source address")
+        with col_info:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div style="margin-bottom: 1rem;">
+                    <div style="color: #848E9C; font-size: 0.875rem;">Your Wallet Address</div>
+                    <div style="color: #F0B90B; font-size: 0.875rem; font-family: 'Roboto Mono', monospace; word-break: break-all; margin-top: 0.5rem;">
+                        {linked_wallet_addr}
+                    </div>
+                </div>
+                <div style="color: #0ECB81; font-size: 0.875rem; margin-top: 1rem;">
+                    ✅ Scan QR code or copy the address above to receive USDT (BEP20)
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        st.markdown("### 📋 Copy Address")
+        st.code(linked_wallet_addr, language=None)
+        
+        st.markdown("""
+        <div style="background: rgba(240, 185, 11, 0.1); border: 1px solid #F0B90B; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+            <div style="color: #F0B90B; font-weight: 600; margin-bottom: 0.5rem;">⚠️ Important</div>
+            <ul style="color: #848E9C; margin: 0; padding-left: 1.5rem;">
+                <li>Only send USDT (BEP20) to this address</li>
+                <li>Sending other tokens may result in permanent loss</li>
+                <li>Transactions may take a few minutes to confirm</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="metric-card">
+            <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔗</div>
+                <div style="color: #EAECEF; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    Link Your BSC Wallet
+                </div>
+                <div style="color: #848E9C; margin-bottom: 1.5rem;">
+                    To receive USDT, please link your BSC wallet address in Settings first.
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("⚙️ Go to Settings", use_container_width=True, key="goto_settings_receive"):
+            st.switch_page("pages/5_Settings.py")
 
 with tab2:
-    st.markdown("### Withdraw USDT")
-    st.markdown("Send funds from your wallet")
-    
-    has_pin = user_has_pin(st.session_state.user_id)
-    pin_attempts = get_pin_attempts(st.session_state.user_id)
-    
-    if pin_attempts >= 5:
-        st.error("Account locked due to too many failed PIN attempts. Please contact support.")
-    else:
-        with st.form("withdraw_form"):
-            withdraw_amount = st.number_input(
-                "Amount (USDT)",
-                min_value=0.01,
-                max_value=float(user_balance),
-                value=min(100.0, float(user_balance)) if user_balance > 0 else 0.01,
-                step=10.0,
-                help="Enter the amount you want to withdraw"
-            )
-            
-            dest_address = st.text_input(
-                "Destination Address",
-                placeholder="0x...",
-                help="Enter the wallet address to send to"
-            )
-            
-            pin_input = ""
-            if has_pin:
-                pin_input = st.text_input(
-                    "Enter PIN",
-                    type="password",
-                    max_chars=6,
-                    help="Enter your 6-digit PIN to authorize this withdrawal"
-                )
-                st.caption("🔐 PIN required for withdrawals")
-            
-            st.caption(f"⚠️ Available: ${user_balance:,.2f} USDT")
-            
-            withdraw_btn = st.form_submit_button("Withdraw", use_container_width=True)
-            
-            if withdraw_btn:
-                if withdraw_amount > 0 and dest_address:
-                    if not dest_address.startswith("0x") or len(dest_address) != 42:
-                        st.error("Please enter a valid wallet address (0x... format, 42 characters)")
-                    elif Decimal(str(withdraw_amount)) > user_balance:
-                        st.error("Insufficient balance")
-                    elif has_pin and not verify_user_pin(st.session_state.user_id, pin_input):
-                        remaining = 5 - get_pin_attempts(st.session_state.user_id)
-                        st.error(f"Invalid PIN. {remaining} attempts remaining.")
-                    else:
-                        new_balance = user_balance - Decimal(str(withdraw_amount))
-                        
-                        create_transaction(
-                            st.session_state.user_id,
-                            "send",
-                            str(withdraw_amount),
-                            dest_address,
-                            "completed"
-                        )
-                        
-                        update_user_balance(st.session_state.user_id, str(new_balance))
-                        
-                        st.success(f"Successfully sent ${withdraw_amount:,.2f} USDT!")
-                        st.rerun()
-                else:
-                    st.warning("Please enter amount and destination address")
-
-with tab3:
     st.markdown("### Transaction History")
     
     if transactions:
@@ -280,7 +258,7 @@ with tab3:
     else:
         st.info("No transactions yet. Make your first deposit to get started!")
 
-with tab4:
+with tab3:
     st.markdown("### Blockchain Transaction History")
     st.markdown("View real transactions from the BSC blockchain")
     
