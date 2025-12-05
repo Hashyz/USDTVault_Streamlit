@@ -79,6 +79,20 @@ def get_user_by_id(user_id: str):
         return None
     return db.users.find_one({"_id": ObjectId(user_id)})
 
+def get_user_by_username(username: str):
+    """Get user by username (public info only)"""
+    db = get_db()
+    if db is None:
+        return None
+    user = db.users.find_one({"username": username.lower()})
+    if user:
+        return {
+            "username": user["username"],
+            "linked_wallet_address": user.get("linked_wallet_address"),
+            "created_at": user.get("created_at")
+        }
+    return None
+
 def update_user_balance(user_id: str, new_balance: str):
     """Update user balance"""
     db = get_db()
