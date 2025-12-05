@@ -27,7 +27,8 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 ├── utils/
 │   ├── __init__.py
 │   ├── database.py           # MongoDB connection and models
-│   └── auth.py               # Authentication helpers
+│   ├── auth.py               # Authentication helpers
+│   └── blockchain.py         # BSC blockchain read-only service
 └── .streamlit/
     └── config.toml           # Streamlit configuration
 ```
@@ -43,6 +44,11 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 - Settings page with PIN protection
 - Demo account for testing
 - Binance-inspired dark theme with gold accents
+- **Blockchain Integration (Read-Only)**:
+  - Link your real BSC wallet address to view live balances
+  - Dashboard shows real-time BNB and USDT balances from BSC
+  - Transaction history tab shows real blockchain transactions from BSCScan
+  - No private key required - safe, read-only access
 
 ### Data Models
 
