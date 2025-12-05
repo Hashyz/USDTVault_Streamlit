@@ -72,10 +72,13 @@ def render_sidebar(current_page=""):
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                if st.button(f"{icon} {name}", key=f"nav_{page_name}", use_container_width=True):
-                    st.switch_page(page_path)
+                st.page_link(page_path, label=f"{icon} {name}", use_container_width=True)
         
         st.markdown("---")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.page_link("pages/6_Profile.py", label="👤 Public Profile", use_container_width=True)
         
         if st.button("🚪 Logout", key="nav_logout", use_container_width=True):
             logout()
