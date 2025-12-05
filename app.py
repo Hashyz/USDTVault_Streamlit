@@ -1,199 +1,393 @@
 import streamlit as st
 import os
-from utils.database import init_db, get_db
-from utils.auth import init_session_state, login, register, logout
+from qrcode import QRCode
+from qrcode.constants import ERROR_CORRECT_L
+from io import BytesIO
+import base64
+from web3 import Web3
 
 st.set_page_config(
-    page_title="USDT Vault Pro",
-    page_icon="💰",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Wallet Dashboard",
+    page_icon="",
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
+
+WALLET_ADDRESS = os.environ.get("WALLET_ADDRESS", "")
+WALLET_USERNAME = os.environ.get("WALLET_USERNAME", "@hashyz")
+
+BSC_RPC_URL = "https://bsc-dataseed.binance.org/"
+USDT_CONTRACT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955"
+
+USDT_ABI = [
+    {
+        "constant": True,
+        "inputs": [{"name": "_owner", "type": "address"}],
+        "name": "balanceOf",
+        "outputs": [{"name": "balance", "type": "uint256"}],
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{"name": "", "type": "uint8"}],
+        "type": "function"
+    }
+]
 
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
     
     [data-testid="stSidebarNav"] { display: none !important; }
-    
-    :root {
-        --gold: #F0B90B;
-        --gold-dark: #C99E00;
-        --green: #0ECB81;
-        --red: #F6465D;
-        --bg-dark: #0B0E11;
-        --bg-card: #1E2329;
-        --bg-input: #2B3139;
-        --text-primary: #EAECEF;
-        --text-secondary: #848E9C;
-    }
+    [data-testid="stSidebar"] { display: none !important; }
+    header[data-testid="stHeader"] { display: none !important; }
+    #MainMenu { display: none !important; }
+    footer { display: none !important; }
     
     .stApp {
         background-color: #0B0E11;
     }
     
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #F0B90B;
-        text-align: center;
-        margin-bottom: 0.5rem;
+    .main-container {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 20px;
     }
     
-    .sub-header {
-        font-size: 1rem;
-        color: #848E9C;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #F0B90B 0%, #C99E00 100%);
-        color: #0B0E11;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        width: 100%;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #FFD93D 0%, #F0B90B 100%);
-        box-shadow: 0 4px 15px rgba(240, 185, 11, 0.3);
-    }
-    
-    .stTextInput > div > div > input {
-        background-color: #2B3139;
-        border: 1px solid #3C4452;
-        border-radius: 8px;
-        color: #EAECEF;
-        padding: 0.75rem;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: #F0B90B;
-        box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.2);
-    }
-    
-    div[data-testid="stSidebar"] {
-        background-color: #1E2329;
-    }
-    
-    div[data-testid="stSidebar"] .stButton > button {
-        background: transparent;
-        color: #EAECEF;
-        border: 1px solid #3C4452;
-        text-align: left;
-        justify-content: flex-start;
-    }
-    
-    div[data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(240, 185, 11, 0.1);
-        border-color: #F0B90B;
-    }
-    
-    .metric-card {
+    .portfolio-card {
         background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #3C4452;
+        border: 2px solid #F0B90B;
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+        margin-bottom: 20px;
     }
     
-    .success-text { color: #0ECB81; }
-    .error-text { color: #F6465D; }
-    .gold-text { color: #F0B90B; }
-    
-    h1, h2, h3 { color: #EAECEF; }
-    p { color: #848E9C; }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: transparent;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background-color: #2B3139;
-        border-radius: 8px;
-        color: #848E9C;
-        padding: 0.5rem 1rem;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background-color: #F0B90B;
+    .username-badge {
+        background: #F0B90B;
         color: #0B0E11;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 16px;
+        display: inline-block;
+        margin-bottom: 12px;
+    }
+    
+    .live-indicator {
+        color: #0ECB81;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .live-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #0ECB81;
+        border-radius: 50%;
+        margin-right: 6px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .portfolio-label {
+        color: #848E9C;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+    
+    .portfolio-value {
+        color: #0ECB81;
+        font-size: 48px;
+        font-weight: 700;
+        font-family: 'Roboto Mono', monospace;
+    }
+    
+    .balance-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .balance-card {
+        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
+        border: 1px solid #3C4452;
+        border-radius: 12px;
+        padding: 20px;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .balance-label {
+        color: #848E9C;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+    
+    .balance-amount {
+        color: #0ECB81;
+        font-size: 24px;
+        font-weight: 600;
+        font-family: 'Roboto Mono', monospace;
+    }
+    
+    .balance-token {
+        color: #848E9C;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    .qr-section {
+        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
+        border: 1px solid #3C4452;
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .qr-title {
+        color: #EAECEF;
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .qr-subtitle {
+        color: #848E9C;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+    
+    .qr-container {
+        background: white;
+        padding: 16px;
+        border-radius: 12px;
+        display: inline-block;
+        margin-bottom: 20px;
+    }
+    
+    .address-section {
+        background: linear-gradient(135deg, #2B3139 0%, #1E2329 100%);
+        border: 1px solid #F0B90B;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .address-label {
+        color: #848E9C;
+        font-size: 11px;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+    
+    .address-text {
+        color: #F0B90B;
+        font-size: 13px;
+        font-family: 'Roboto Mono', monospace;
+        word-break: break-all;
+        line-height: 1.4;
+    }
+    
+    .network-badge {
+        background: #F0B90B;
+        color: #0B0E11;
+        padding: 6px 16px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .footer-address {
+        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
+        border: 1px solid #3C4452;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+    
+    .footer-address-text {
+        color: #848E9C;
+        font-size: 12px;
+        font-family: 'Roboto Mono', monospace;
+        word-break: break-all;
+    }
+    
+    .branding {
+        text-align: center;
+        margin-top: 30px;
+        padding: 20px;
+    }
+    
+    .branding img {
+        width: 40px;
+        height: 40px;
+        margin-bottom: 8px;
+    }
+    
+    .branding-text {
+        color: #F0B90B;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .branding-subtext {
+        color: #848E9C;
+        font-size: 11px;
+    }
+    
+    .error-message {
+        background: rgba(246, 70, 93, 0.1);
+        border: 1px solid #F6465D;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        color: #F6465D;
+    }
+    
+    div[data-testid="stVerticalBlock"] > div {
+        padding: 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-init_session_state()
+@st.cache_data(ttl=30)
+def get_wallet_balances(address):
+    try:
+        w3 = Web3(Web3.HTTPProvider(BSC_RPC_URL))
+        
+        if not w3.is_address(address):
+            return None, None, None
+        
+        checksum_address = w3.to_checksum_address(address)
+        
+        bnb_balance_wei = w3.eth.get_balance(checksum_address)
+        bnb_balance = float(w3.from_wei(bnb_balance_wei, 'ether'))
+        
+        usdt_contract = w3.eth.contract(
+            address=w3.to_checksum_address(USDT_CONTRACT_ADDRESS),
+            abi=USDT_ABI
+        )
+        usdt_balance_raw = usdt_contract.functions.balanceOf(checksum_address).call()
+        usdt_balance = float(usdt_balance_raw) / (10 ** 18)
+        
+        bnb_price = 300
+        total_usd = usdt_balance + (bnb_balance * bnb_price)
+        
+        return bnb_balance, usdt_balance, total_usd
+    except Exception as e:
+        st.error(f"Error fetching balances: {str(e)}")
+        return 0, 0, 0
 
-db = init_db()
-db_connected = db is not None
+def generate_qr_code(data):
+    qr = QRCode(
+        version=1,
+        error_correction=ERROR_CORRECT_L,
+        box_size=8,
+        border=2,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return img_str
 
-query_params = st.query_params
-if "user" in query_params:
-    st.session_state.profile_user = query_params.get("user")
-    st.switch_page("pages/6_Profile.py")
-
-if st.session_state.authenticated:
-    st.switch_page("pages/1_Dashboard.py")
-else:
-    st.markdown('<h1 class="main-header">💰 USDT Vault Pro</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Secure USDT Savings & Portfolio Management</p>', unsafe_allow_html=True)
-    
-    if not db_connected:
-        st.warning("⚠️ MongoDB not connected. Please add your MONGODB_URI to Secrets to enable full functionality.")
-    
-    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
-    
-    with tab1:
-        st.markdown("### Welcome Back")
-        with st.form("login_form"):
-            username = st.text_input("Username", placeholder="Enter your username")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
-            
-            login_btn = st.form_submit_button("Login", use_container_width=True)
-            
-            if login_btn:
-                if username and password:
-                    success, message = login(username, password)
-                    if success:
-                        st.success(message)
-                        st.rerun()
-                    else:
-                        st.error(message)
-                else:
-                    st.warning("Please enter username and password")
-    
-    with tab2:
-        st.markdown("### Create Account")
-        with st.form("register_form"):
-            new_username = st.text_input("Username", placeholder="Choose a username (min 3 characters)")
-            new_password = st.text_input("Password", type="password", placeholder="Choose a password (min 8 characters)")
-            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm your password")
-            
-            register_btn = st.form_submit_button("Create Account", use_container_width=True)
-            
-            if register_btn:
-                if new_password != confirm_password:
-                    st.error("Passwords do not match")
-                elif new_username and new_password:
-                    if db_connected:
-                        success, message = register(new_username, new_password)
-                        if success:
-                            st.success(message)
-                            st.rerun()
-                        else:
-                            st.error(message)
-                    else:
-                        st.error("Registration requires database connection")
-                else:
-                    st.warning("Please fill in all fields")
-    
-    st.markdown("---")
+if not WALLET_ADDRESS:
     st.markdown("""
-    <div style="text-align: center; color: #848E9C; font-size: 0.875rem;">
-        <p>Built for BEP20 USDT on Binance Smart Chain</p>
+    <div class="main-container">
+        <div class="error-message">
+            <h3 style="margin-bottom: 12px;">Wallet Not Configured</h3>
+            <p style="margin-bottom: 16px;">Please add your wallet address to the environment variables.</p>
+            <p style="font-size: 12px; color: #848E9C;">Set <code>WALLET_ADDRESS</code> in your Secrets</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
+else:
+    bnb_balance, usdt_balance, total_usd = get_wallet_balances(WALLET_ADDRESS)
+    
+    if bnb_balance is None or usdt_balance is None or total_usd is None:
+        st.markdown(f"""
+        <div class="main-container">
+            <div class="error-message">
+                <h3 style="margin-bottom: 12px;">Invalid Wallet Address</h3>
+                <p style="margin-bottom: 16px;">The wallet address provided is not valid.</p>
+                <p style="font-size: 12px; color: #848E9C;">Address: <code>{WALLET_ADDRESS}</code></p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+    
+    qr_code_base64 = generate_qr_code(WALLET_ADDRESS)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="portfolio-card">
+<div class="username-badge">{WALLET_USERNAME}</div>
+<div class="live-indicator"><span class="live-dot"></span>Live from BSC</div>
+<div class="portfolio-label">Total Portfolio Value</div>
+<div class="portfolio-value">${total_usd:.2f}</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="balance-row">
+<div class="balance-card">
+<div class="balance-label">BNB BALANCE</div>
+<div class="balance-amount">{bnb_balance:.4f}</div>
+<div class="balance-token">BNB</div>
+</div>
+<div class="balance-card">
+<div class="balance-label">USDT BALANCE</div>
+<div class="balance-amount">${usdt_balance:.2f}</div>
+<div class="balance-token">USDT (BEP20)</div>
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="qr-section">
+<div class="qr-title">Send to this wallet</div>
+<div class="qr-subtitle">Scan QR code or copy address below</div>
+<div class="qr-container">
+<img src="data:image/png;base64,{qr_code_base64}" width="180" height="180" alt="QR Code">
+</div>
+<div class="address-section">
+<div class="address-label">WALLET ADDRESS</div>
+<div class="address-text">{WALLET_ADDRESS}</div>
+</div>
+<div class="network-badge">BSC Network<br><span style="font-weight: 400; font-size: 10px;">(BEP20)</span></div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="footer-address">
+<div class="footer-address-text">{WALLET_ADDRESS}</div>
+</div>
+<div class="branding">
+<div class="branding-text">Powered by BSC</div>
+<div class="branding-subtext">Binance Smart Chain Network</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
