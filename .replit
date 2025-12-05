@@ -28,15 +28,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "USDT Vault Pro"
+args = "Wallet Dashboard"
 
 [[workflows.workflow]]
-name = "USDT Vault Pro"
+name = "Wallet Dashboard"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py"
+args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.headless true"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -45,3 +45,7 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 38547
+externalPort = 3000
