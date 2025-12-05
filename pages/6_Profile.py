@@ -277,6 +277,11 @@ init_db()
 query_params = st.query_params
 profile_username = query_params.get("user", None)
 
+if not profile_username and "profile_user" in st.session_state:
+    profile_username = st.session_state.profile_user
+    st.query_params["user"] = profile_username
+    del st.session_state.profile_user
+
 with st.sidebar:
     st.markdown("### 👤 Public Profile")
     st.markdown("View any user's wallet")

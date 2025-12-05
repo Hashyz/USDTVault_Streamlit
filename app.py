@@ -129,6 +129,11 @@ init_session_state()
 db = init_db()
 db_connected = db is not None
 
+query_params = st.query_params
+if "user" in query_params:
+    st.session_state.profile_user = query_params.get("user")
+    st.switch_page("pages/6_Profile.py")
+
 if st.session_state.authenticated:
     st.switch_page("pages/1_Dashboard.py")
 else:
