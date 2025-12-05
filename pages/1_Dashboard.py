@@ -23,6 +23,7 @@ st.markdown("""
         padding: 1.5rem;
         border: 1px solid #3C4452;
         margin-bottom: 1rem;
+        min-height: 200px;
     }
     .metric-value {
         font-size: 2rem;
@@ -52,6 +53,7 @@ st.markdown("""
         border: 2px solid #F0B90B;
         margin-bottom: 1rem;
         position: relative;
+        min-height: 200px;
     }
     .blockchain-card::before {
         content: '';
