@@ -5,7 +5,8 @@ import pandas as pd
 from utils.auth import init_session_state, get_current_user, logout
 from utils.database import (
     get_user_transactions, create_transaction,
-    get_user_by_id, update_user_balance
+    get_user_by_id, update_user_balance,
+    user_has_pin, verify_user_pin, get_pin_attempts
 )
 
 st.set_page_config(
@@ -143,49 +144,68 @@ with tab2:
     st.markdown("### Withdraw USDT")
     st.markdown("Send funds from your wallet")
     
-    with st.form("withdraw_form"):
-        withdraw_amount = st.number_input(
-            "Amount (USDT)",
-            min_value=0.01,
-            max_value=float(user_balance),
-            value=min(100.0, float(user_balance)) if user_balance > 0 else 0.01,
-            step=10.0,
-            help="Enter the amount you want to withdraw"
-        )
-        
-        dest_address = st.text_input(
-            "Destination Address",
-            placeholder="0x...",
-            help="Enter the wallet address to send to"
-        )
-        
-        st.caption(f"⚠️ Available: ${user_balance:,.2f} USDT")
-        
-        withdraw_btn = st.form_submit_button("Withdraw", use_container_width=True)
-        
-        if withdraw_btn:
-            if withdraw_amount > 0 and dest_address:
-                if not dest_address.startswith("0x") or len(dest_address) != 42:
-                    st.error("Please enter a valid wallet address (0x... format, 42 characters)")
-                elif Decimal(str(withdraw_amount)) > user_balance:
-                    st.error("Insufficient balance")
+    has_pin = user_has_pin(st.session_state.user_id)
+    pin_attempts = get_pin_attempts(st.session_state.user_id)
+    
+    if pin_attempts >= 5:
+        st.error("Account locked due to too many failed PIN attempts. Please contact support.")
+    else:
+        with st.form("withdraw_form"):
+            withdraw_amount = st.number_input(
+                "Amount (USDT)",
+                min_value=0.01,
+                max_value=float(user_balance),
+                value=min(100.0, float(user_balance)) if user_balance > 0 else 0.01,
+                step=10.0,
+                help="Enter the amount you want to withdraw"
+            )
+            
+            dest_address = st.text_input(
+                "Destination Address",
+                placeholder="0x...",
+                help="Enter the wallet address to send to"
+            )
+            
+            pin_input = ""
+            if has_pin:
+                pin_input = st.text_input(
+                    "Enter PIN",
+                    type="password",
+                    max_chars=6,
+                    help="Enter your 6-digit PIN to authorize this withdrawal"
+                )
+                st.caption("🔐 PIN required for withdrawals")
+            
+            st.caption(f"⚠️ Available: ${user_balance:,.2f} USDT")
+            
+            withdraw_btn = st.form_submit_button("Withdraw", use_container_width=True)
+            
+            if withdraw_btn:
+                if withdraw_amount > 0 and dest_address:
+                    if not dest_address.startswith("0x") or len(dest_address) != 42:
+                        st.error("Please enter a valid wallet address (0x... format, 42 characters)")
+                    elif Decimal(str(withdraw_amount)) > user_balance:
+                        st.error("Insufficient balance")
+                    elif has_pin and not verify_user_pin(st.session_state.user_id, pin_input):
+                        remaining = 5 - get_pin_attempts(st.session_state.user_id)
+                        st.error(f"Invalid PIN. {remaining} attempts remaining.")
+                    else:
+                        new_balance = user_balance - Decimal(str(withdraw_amount))
+                        
+                        create_transaction(
+                            st.session_state.user_id,
+                            "send",
+                            str(withdraw_amount),
+                            dest_address,
+                            "completed"
+                        )
+                        
+                        update_user_balance(st.session_state.user_id, str(new_balance))
+                        
+                        st.success(f"Successfully sent ${withdraw_amount:,.2f} USDT!")
+                        st.rerun()
                 else:
-                    new_balance = user_balance - Decimal(str(withdraw_amount))
-                    
-                    create_transaction(
-                        st.session_state.user_id,
-                        "send",
-                        str(withdraw_amount),
-                        dest_address,
-                        "completed"
-                    )
-                    
-                    update_user_balance(st.session_state.user_id, str(new_balance))
-                    
-                    st.success(f"Successfully sent ${withdraw_amount:,.2f} USDT!")
-                    st.rerun()
-            else:
-                st.warning("Please enter amount and destination address")
+                    st.warning("Please enter amount and destination address")
 
 with tab3:
     st.markdown("### Transaction History")

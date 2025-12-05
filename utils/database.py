@@ -105,7 +105,7 @@ def update_user_pin(user_id: str, pin: str):
     return result.modified_count > 0
 
 def verify_user_pin(user_id: str, pin: str):
-    """Verify user PIN"""
+    """Verify user PIN with attempt throttling"""
     db = get_db()
     if db is None:
         return False
@@ -114,7 +114,52 @@ def verify_user_pin(user_id: str, pin: str):
     if not user or not user.get("pin"):
         return False
     
-    return bcrypt.checkpw(pin.encode('utf-8'), user["pin"])
+    pin_attempts = user.get("pin_attempts", 0)
+    if pin_attempts >= 5:
+        return False
+    
+    if bcrypt.checkpw(pin.encode('utf-8'), user["pin"]):
+        db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"pin_attempts": 0}}
+        )
+        return True
+    else:
+        db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$inc": {"pin_attempts": 1}}
+        )
+        return False
+
+def reset_pin_attempts(user_id: str):
+    """Reset PIN attempt counter"""
+    db = get_db()
+    if db is None:
+        return False
+    
+    result = db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"pin_attempts": 0}}
+    )
+    return result.modified_count > 0
+
+def get_pin_attempts(user_id: str):
+    """Get current PIN attempt count"""
+    db = get_db()
+    if db is None:
+        return 0
+    
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    return user.get("pin_attempts", 0) if user else 0
+
+def user_has_pin(user_id: str):
+    """Check if user has a PIN set"""
+    db = get_db()
+    if db is None:
+        return False
+    
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    return user is not None and user.get("pin") is not None
 
 def create_transaction(user_id: str, tx_type: str, amount: str, address: str, status: str = "completed"):
     """Create a new transaction"""
