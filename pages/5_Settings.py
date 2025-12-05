@@ -1,7 +1,8 @@
 import streamlit as st
 from decimal import Decimal
 from utils.auth import init_session_state, get_current_user, logout
-from utils.database import update_user_pin, verify_user_pin, get_user_by_id
+from utils.database import update_user_pin, verify_user_pin, get_user_by_id, update_user_wallet_address
+from utils.blockchain import validate_address, get_wallet_balance
 
 st.set_page_config(
     page_title="Settings - USDT Vault Pro",
@@ -162,6 +163,119 @@ with col2:
                     update_user_pin(st.session_state.user_id, new_pin)
                     st.success("PIN set successfully!")
                     st.rerun()
+
+st.markdown("---")
+
+st.markdown("### 🔗 Blockchain Wallet")
+st.markdown("""
+<div class="metric-card">
+    <p style="color: #EAECEF; margin-bottom: 0.5rem;">
+        <strong>Link your BSC wallet to view real-time balances</strong>
+    </p>
+    <p style="color: #848E9C; font-size: 0.875rem; margin: 0;">
+        🔒 <strong>Read-only access</strong> - Only your public wallet address is needed. 
+        No private key required. Your funds remain completely safe and under your control.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+linked_wallet = user.get('linked_wallet_address')
+
+if linked_wallet:
+    st.markdown("#### Currently Linked Wallet")
+    
+    wallet_balance = get_wallet_balance(linked_wallet)
+    
+    col_wallet1, col_wallet2 = st.columns([2, 1])
+    
+    with col_wallet1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div style="margin-bottom: 1rem;">
+                <div style="color: #848E9C; font-size: 0.875rem;">Linked BSC Address</div>
+                <div style="color: #F0B90B; font-size: 0.875rem; font-family: 'Roboto Mono', monospace; word-break: break-all;">
+                    {linked_wallet}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        if wallet_balance:
+            bnb_balance = Decimal(wallet_balance.get('bnb', '0'))
+            usdt_balance = Decimal(wallet_balance.get('usdt', '0'))
+            total_usd = Decimal(wallet_balance.get('total_usd', '0'))
+            
+            st.markdown(f"""
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                <div>
+                    <div style="color: #848E9C; font-size: 0.75rem;">BNB Balance</div>
+                    <div style="color: #F0B90B; font-size: 1.25rem; font-weight: 600; font-family: 'Roboto Mono', monospace;">
+                        {bnb_balance:.6f} BNB
+                    </div>
+                </div>
+                <div>
+                    <div style="color: #848E9C; font-size: 0.75rem;">USDT Balance</div>
+                    <div style="color: #0ECB81; font-size: 1.25rem; font-weight: 600; font-family: 'Roboto Mono', monospace;">
+                        ${usdt_balance:,.2f} USDT
+                    </div>
+                </div>
+                <div>
+                    <div style="color: #848E9C; font-size: 0.75rem;">Total Value (USD)</div>
+                    <div style="color: #EAECEF; font-size: 1.25rem; font-weight: 600; font-family: 'Roboto Mono', monospace;">
+                        ${total_usd:,.2f}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="color: #F6465D; font-size: 0.875rem;">
+                ⚠️ Unable to fetch balance. Please check your connection or try again later.
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    with col_wallet2:
+        st.markdown("<div style='padding-top: 1.5rem;'></div>", unsafe_allow_html=True)
+        if st.button("🔓 Unlink Wallet", use_container_width=True, key="unlink_wallet"):
+            if update_user_wallet_address(st.session_state.user_id, None):
+                st.success("Wallet unlinked successfully!")
+                st.rerun()
+            else:
+                st.error("Failed to unlink wallet. Please try again.")
+        
+        if st.button("🔄 Refresh Balance", use_container_width=True, key="refresh_balance"):
+            st.rerun()
+
+else:
+    st.markdown("#### Link Your BSC Wallet")
+    
+    with st.form("link_wallet_form"):
+        wallet_address = st.text_input(
+            "BSC Wallet Address",
+            placeholder="0x...",
+            help="Enter your BSC (BEP20) wallet address. This is your public address that starts with '0x'."
+        )
+        
+        st.markdown("""
+        <p style="color: #848E9C; font-size: 0.8rem; margin-top: -0.5rem;">
+            💡 You can find your wallet address in MetaMask, Trust Wallet, or any BSC-compatible wallet.
+        </p>
+        """, unsafe_allow_html=True)
+        
+        link_btn = st.form_submit_button("🔗 Link Wallet", use_container_width=True)
+        
+        if link_btn:
+            if not wallet_address:
+                st.error("Please enter a wallet address")
+            elif not validate_address(wallet_address):
+                st.error("Invalid wallet address format. Please enter a valid BSC address (0x followed by 40 hex characters)")
+            else:
+                if update_user_wallet_address(st.session_state.user_id, wallet_address):
+                    st.success("Wallet linked successfully!")
+                    st.rerun()
+                else:
+                    st.error("Failed to link wallet. Please try again.")
 
 st.markdown("---")
 

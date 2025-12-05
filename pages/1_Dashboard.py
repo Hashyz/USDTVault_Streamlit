@@ -6,6 +6,7 @@ from decimal import Decimal
 import pandas as pd
 from utils.auth import init_session_state, require_auth, get_current_user, logout
 from utils.database import get_user_transactions, get_user_savings_goals, get_user_investment_plans
+from utils.blockchain import get_wallet_balance
 
 st.set_page_config(
     page_title="Dashboard - USDT Vault Pro",
@@ -44,6 +45,84 @@ st.markdown("""
     p { color: #848E9C; }
     div[data-testid="stSidebar"] { background-color: #1E2329; }
     .gold-text { color: #F0B90B; }
+    .blockchain-card {
+        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 2px solid #F0B90B;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    .blockchain-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #F0B90B, #0ECB81);
+        border-radius: 12px 12px 0 0;
+    }
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: #0ECB81;
+        background: rgba(14, 203, 129, 0.1);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+    }
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #0ECB81;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .wallet-address {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.75rem;
+        color: #848E9C;
+        background: rgba(60, 68, 82, 0.5);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+    }
+    .balance-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0.5rem 0;
+    }
+    .balance-label {
+        font-size: 0.875rem;
+        color: #848E9C;
+    }
+    .balance-amount {
+        font-family: 'Roboto Mono', monospace;
+        font-weight: 600;
+        color: #EAECEF;
+    }
+    .error-card {
+        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid #F6465D;
+        margin-bottom: 1rem;
+    }
+    .section-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #848E9C;
+        margin-bottom: 0.25rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -89,18 +168,75 @@ total_received = sum(Decimal(tx['amount']) for tx in transactions if tx['type'] 
 total_sent = sum(Decimal(tx['amount']) for tx in transactions if tx['type'] == 'send')
 total_savings = sum(Decimal(goal.get('current', '0')) for goal in savings_goals)
 
-col1, col2, col3, col4 = st.columns(4)
+linked_wallet = user.get('linked_wallet_address')
+blockchain_balances = None
+blockchain_error = False
+
+if linked_wallet:
+    blockchain_balances = get_wallet_balance(linked_wallet)
+    if blockchain_balances is None:
+        blockchain_error = True
+
+if linked_wallet:
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col_received, col_sent, col_savings = col3, col4, col5
+else:
+    col1, col2, col3, col4 = st.columns(4)
+    col_received, col_sent, col_savings = col2, col3, col4
 
 with col1:
     st.markdown(f"""
     <div class="metric-card">
+        <div class="section-label">App Balance</div>
         <div class="metric-label">💰 Total Balance</div>
         <div class="metric-value">${balance:,.2f}</div>
         <div class="metric-change">USDT (BEP20)</div>
     </div>
     """, unsafe_allow_html=True)
 
-with col2:
+if linked_wallet:
+    with col2:
+        shortened_wallet = f"{linked_wallet[:6]}...{linked_wallet[-4:]}"
+        if blockchain_balances and not blockchain_error:
+            bnb_balance = Decimal(blockchain_balances['bnb'])
+            usdt_balance = Decimal(blockchain_balances['usdt'])
+            total_usd = Decimal(blockchain_balances['total_usd'])
+            st.markdown(f"""
+            <div class="blockchain-card">
+                <div class="section-label">Blockchain Balance</div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    Live from BSC
+                </div>
+                <div class="metric-label">🔗 Blockchain Wallet</div>
+                <div class="metric-value">${total_usd:,.2f}</div>
+                <div class="balance-row">
+                    <span class="balance-label">BNB</span>
+                    <span class="balance-amount">{bnb_balance:.4f}</span>
+                </div>
+                <div class="balance-row">
+                    <span class="balance-label">USDT</span>
+                    <span class="balance-amount">${usdt_balance:,.2f}</span>
+                </div>
+                <div class="wallet-address">{shortened_wallet}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="error-card">
+                <div class="section-label">Blockchain Balance</div>
+                <div class="metric-label">🔗 Blockchain Wallet</div>
+                <div style="color: #F6465D; font-size: 0.875rem; margin: 0.5rem 0;">
+                    ⚠️ Unable to fetch balances
+                </div>
+                <div style="color: #848E9C; font-size: 0.75rem;">
+                    Network issue. Please refresh to retry.
+                </div>
+                <div class="wallet-address">{shortened_wallet}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+with col_received:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">📥 Total Received</div>
@@ -109,7 +245,7 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-with col3:
+with col_sent:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">📤 Total Sent</div>
@@ -118,7 +254,7 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
-with col4:
+with col_savings:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">🎯 Total Savings</div>

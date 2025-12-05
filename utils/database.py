@@ -291,6 +291,18 @@ def delete_investment_plan(plan_id: str):
     result = db.investment_plans.delete_one({"_id": ObjectId(plan_id)})
     return result.deleted_count > 0
 
+def update_user_wallet_address(user_id: str, wallet_address: str | None):
+    """Update user's linked BSC wallet address (public address for balance viewing)"""
+    db = get_db()
+    if db is None:
+        return False
+    
+    result = db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"linked_wallet_address": wallet_address if wallet_address else None}}
+    )
+    return result.modified_count > 0 or result.matched_count > 0
+
 def create_demo_account():
     """Create demo account if it doesn't exist"""
     db = get_db()
