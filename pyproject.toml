@@ -6,9 +6,11 @@ authors = ["Your Name <you@example.com>"]
 requires-python = ">=3.11"
 dependencies = [
     "bcrypt>=5.0.0",
+    "cryptography>=46.0.3",
     "pandas>=2.3.3",
     "plotly>=6.5.0",
     "pymongo>=4.15.5",
     "python-dotenv>=1.2.1",
     "streamlit>=1.52.0",
+    "web3>=7.14.0",
 ]
