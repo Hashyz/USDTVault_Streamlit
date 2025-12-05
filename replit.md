@@ -21,9 +21,10 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 ├── pages/
 │   ├── 1_Dashboard.py        # Main dashboard with stats and charts
 │   ├── 2_Savings_Goals.py    # Savings goals management
-│   ├── 3_Transactions.py     # Transaction history and deposits/withdrawals
+│   ├── 3_Transactions.py     # Transaction history and receive funds
 │   ├── 4_Investment_Plans.py # DCA investment plans
-│   └── 5_Settings.py         # Account settings and security
+│   ├── 5_Settings.py         # Account settings and security
+│   └── 6_Profile.py          # Public profile viewer
 ├── utils/
 │   ├── __init__.py
 │   ├── database.py           # MongoDB connection and models
@@ -37,18 +38,21 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 
 ### Completed Features
 - User authentication (login/register) with session state
-- Dashboard with balance display, stats cards, and balance chart
-- Savings goals with progress tracking, deposits, and withdrawals
-- Transaction history with deposit/withdraw functionality
+- Dashboard with blockchain balance display and stats cards
+- Savings goals with progress tracking
+- Transaction history with receive functionality and QR code
 - Investment plans with DCA scheduling
-- Settings page with PIN protection
-- Demo account for testing
+- Settings page with PIN protection and wallet linking
 - Binance-inspired dark theme with gold accents
 - **Blockchain Integration (Read-Only)**:
   - Link your real BSC wallet address to view live balances
   - Dashboard shows real-time BNB and USDT balances from BSC
   - Transaction history tab shows real blockchain transactions from BSCScan
   - No private key required - safe, read-only access
+- **Public Profile Feature**:
+  - View any user's public wallet at `/?user=username`
+  - Shows linked wallet address, QR code, and live blockchain balances
+  - Shareable profile URLs (e.g., for username "hashyz" use `/?user=hashyz`)
 
 ### Data Models
 
