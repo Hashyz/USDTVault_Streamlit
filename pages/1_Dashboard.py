@@ -4,9 +4,11 @@ import plotly.express as px
 from datetime import datetime, timedelta
 from decimal import Decimal
 import pandas as pd
-from utils.auth import init_session_state, require_auth, get_current_user, logout
+from utils.auth import init_session_state, get_current_user
 from utils.database import get_user_transactions, get_user_savings_goals, get_user_investment_plans
 from utils.blockchain import get_wallet_balance
+from utils.theme import inject_theme
+from utils.sidebar import render_sidebar, check_auth
 
 st.set_page_config(
     page_title="Dashboard - USDT Vault Pro",
@@ -14,163 +16,16 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
-<style>
-    .stApp { background-color: #0B0E11; }
-    .metric-card {
-        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #3C4452;
-        margin-bottom: 1rem;
-        min-height: 200px;
-    }
-    .metric-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #F0B90B;
-        font-family: 'Roboto Mono', monospace;
-    }
-    .metric-label {
-        font-size: 0.875rem;
-        color: #848E9C;
-        margin-bottom: 0.5rem;
-    }
-    .metric-change {
-        font-size: 0.875rem;
-        margin-top: 0.5rem;
-    }
-    .positive { color: #0ECB81; }
-    .negative { color: #F6465D; }
-    h1, h2, h3 { color: #EAECEF; }
-    p { color: #848E9C; }
-    div[data-testid="stSidebar"] { background-color: #1E2329; }
-    .gold-text { color: #F0B90B; }
-    .blockchain-card {
-        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 2px solid #F0B90B;
-        margin-bottom: 1rem;
-        position: relative;
-        min-height: 200px;
-    }
-    .blockchain-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #F0B90B, #0ECB81);
-        border-radius: 12px 12px 0 0;
-    }
-    .live-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.75rem;
-        color: #0ECB81;
-        background: rgba(14, 203, 129, 0.1);
-        padding: 4px 8px;
-        border-radius: 4px;
-        margin-bottom: 0.5rem;
-    }
-    .live-dot {
-        width: 8px;
-        height: 8px;
-        background: #0ECB81;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    .wallet-address {
-        font-family: 'Roboto Mono', monospace;
-        font-size: 0.75rem;
-        color: #848E9C;
-        background: rgba(60, 68, 82, 0.5);
-        padding: 4px 8px;
-        border-radius: 4px;
-        margin-top: 0.5rem;
-    }
-    .balance-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: 0.5rem 0;
-    }
-    .balance-label {
-        font-size: 0.875rem;
-        color: #848E9C;
-    }
-    .balance-amount {
-        font-family: 'Roboto Mono', monospace;
-        font-weight: 600;
-        color: #EAECEF;
-    }
-    .error-card {
-        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #F6465D;
-        margin-bottom: 1rem;
-    }
-    .section-label {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #848E9C;
-        margin-bottom: 0.25rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_theme()
 
 init_session_state()
 
-if not st.session_state.get('authenticated'):
-    st.switch_page("app.py")
+if not check_auth():
+    st.stop()
 
 user = get_current_user()
-if not user:
-    st.switch_page("app.py")
 
-linked_addr = user.get('linked_wallet_address')
-sidebar_balance_display = "Link wallet to view"
-if linked_addr:
-    sidebar_blockchain_balance = get_wallet_balance(linked_addr)
-    if sidebar_blockchain_balance:
-        sidebar_usdt = Decimal(sidebar_blockchain_balance.get('usdt', '0'))
-        sidebar_balance_display = f"${sidebar_usdt:,.2f}"
-    else:
-        sidebar_balance_display = "Unable to fetch"
-
-with st.sidebar:
-    st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**USDT Balance:** `{sidebar_balance_display}`")
-    if linked_addr:
-        st.markdown(f"**Wallet:** `{linked_addr[:6]}...{linked_addr[-4:]}`")
-    else:
-        st.markdown("**Wallet:** `Not linked`")
-    st.markdown("---")
-    
-    if st.button("📊 Dashboard", use_container_width=True):
-        pass
-    if st.button("🎯 Savings Goals", use_container_width=True):
-        st.switch_page("pages/2_Savings_Goals.py")
-    if st.button("💸 Transactions", use_container_width=True):
-        st.switch_page("pages/3_Transactions.py")
-    if st.button("📈 Investment Plans", use_container_width=True):
-        st.switch_page("pages/4_Investment_Plans.py")
-    if st.button("⚙️ Settings", use_container_width=True):
-        st.switch_page("pages/5_Settings.py")
-    
-    st.markdown("---")
-    if st.button("🚪 Logout", use_container_width=True):
-        logout()
-        st.switch_page("app.py")
+render_sidebar("dashboard")
 
 st.markdown("# 📊 Dashboard")
 st.markdown(f"Welcome back, **{user['username'].title()}**!")

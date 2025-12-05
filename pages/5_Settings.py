@@ -1,8 +1,10 @@
 import streamlit as st
 from decimal import Decimal
-from utils.auth import init_session_state, get_current_user, logout
+from utils.auth import init_session_state, get_current_user
 from utils.database import update_user_pin, verify_user_pin, get_user_by_id, update_user_wallet_address
 from utils.blockchain import validate_address, get_wallet_balance
+from utils.theme import inject_theme
+from utils.sidebar import render_sidebar, check_auth
 
 st.set_page_config(
     page_title="Settings - USDT Vault Pro",
@@ -10,79 +12,24 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
-<style>
-    .stApp { background-color: #0B0E11; }
-    .metric-card {
-        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #3C4452;
-        margin-bottom: 1rem;
-    }
-    h1, h2, h3 { color: #EAECEF; }
-    p { color: #848E9C; }
-    div[data-testid="stSidebar"] { background-color: #1E2329; }
-    .stButton > button {
-        background: linear-gradient(135deg, #F0B90B 0%, #C99E00 100%);
-        color: #0B0E11;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-    }
-    .danger-btn > button {
-        background: #F6465D;
-        color: white;
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_theme()
 
 init_session_state()
 
-if not st.session_state.get('authenticated'):
-    st.switch_page("app.py")
+if not check_auth():
+    st.stop()
 
 user = get_current_user()
-if not user:
-    st.switch_page("app.py")
 
-linked_wallet_address = user.get('linked_wallet_address')
-sidebar_balance_display = "Link wallet to view"
-if linked_wallet_address:
-    sidebar_blockchain_balance = get_wallet_balance(linked_wallet_address)
-    if sidebar_blockchain_balance:
-        sidebar_usdt = Decimal(sidebar_blockchain_balance.get('usdt', '0'))
-        sidebar_balance_display = f"${sidebar_usdt:,.2f}"
-    else:
-        sidebar_balance_display = "Unable to fetch"
-
-with st.sidebar:
-    st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**USDT Balance:** `{sidebar_balance_display}`")
-    st.markdown("---")
-    
-    if st.button("📊 Dashboard", use_container_width=True):
-        st.switch_page("pages/1_Dashboard.py")
-    if st.button("🎯 Savings Goals", use_container_width=True):
-        st.switch_page("pages/2_Savings_Goals.py")
-    if st.button("💸 Transactions", use_container_width=True):
-        st.switch_page("pages/3_Transactions.py")
-    if st.button("📈 Investment Plans", use_container_width=True):
-        st.switch_page("pages/4_Investment_Plans.py")
-    if st.button("⚙️ Settings", use_container_width=True):
-        pass
-    
-    st.markdown("---")
-    if st.button("🚪 Logout", use_container_width=True):
-        logout()
-        st.switch_page("app.py")
+render_sidebar("settings")
 
 st.markdown("# ⚙️ Settings")
 st.markdown("Manage your account security and preferences")
 
 col1, col2 = st.columns(2)
 
-linked_wallet_display = user.get('linked_wallet_address', 'Not linked')
+linked_wallet_address = user.get('linked_wallet_address')
+linked_wallet_display = linked_wallet_address if linked_wallet_address else 'Not linked'
 
 account_balance_display = "Link wallet to view balance"
 if linked_wallet_address:

@@ -1,11 +1,13 @@
 import streamlit as st
 from datetime import datetime, timedelta
 from decimal import Decimal
-from utils.auth import init_session_state, get_current_user, logout
+from utils.auth import init_session_state, get_current_user
 from utils.database import (
     get_user_investment_plans, create_investment_plan,
     update_investment_plan, delete_investment_plan
 )
+from utils.theme import inject_theme
+from utils.sidebar import render_sidebar, check_auth
 
 st.set_page_config(
     page_title="Investment Plans - USDT Vault Pro",
@@ -13,60 +15,16 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
-<style>
-    .stApp { background-color: #0B0E11; }
-    .metric-card {
-        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #3C4452;
-        margin-bottom: 1rem;
-    }
-    .plan-active { border-left: 4px solid #0ECB81; }
-    .plan-paused { border-left: 4px solid #848E9C; }
-    h1, h2, h3 { color: #EAECEF; }
-    p { color: #848E9C; }
-    div[data-testid="stSidebar"] { background-color: #1E2329; }
-    .stButton > button {
-        background: linear-gradient(135deg, #F0B90B 0%, #C99E00 100%);
-        color: #0B0E11;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_theme()
 
 init_session_state()
 
-if not st.session_state.get('authenticated'):
-    st.switch_page("app.py")
+if not check_auth():
+    st.stop()
 
 user = get_current_user()
-if not user:
-    st.switch_page("app.py")
 
-with st.sidebar:
-    st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**Balance:** `${Decimal(user.get('balance', '0')):,.2f}`")
-    st.markdown("---")
-    
-    if st.button("📊 Dashboard", use_container_width=True):
-        st.switch_page("pages/1_Dashboard.py")
-    if st.button("🎯 Savings Goals", use_container_width=True):
-        st.switch_page("pages/2_Savings_Goals.py")
-    if st.button("💸 Transactions", use_container_width=True):
-        st.switch_page("pages/3_Transactions.py")
-    if st.button("📈 Investment Plans", use_container_width=True):
-        pass
-    if st.button("⚙️ Settings", use_container_width=True):
-        st.switch_page("pages/5_Settings.py")
-    
-    st.markdown("---")
-    if st.button("🚪 Logout", use_container_width=True):
-        logout()
-        st.switch_page("app.py")
+render_sidebar("investments")
 
 st.markdown("# 📈 Investment Plans")
 st.markdown("Set up recurring investment schedules for dollar-cost averaging")

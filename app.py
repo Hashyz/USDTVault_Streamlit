@@ -14,6 +14,8 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
     
+    [data-testid="stSidebarNav"] { display: none !important; }
+    
     :root {
         --gold: #F0B90B;
         --gold-dark: #C99E00;

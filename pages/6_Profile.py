@@ -25,6 +25,8 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
     
+    [data-testid="stSidebarNav"] { display: none !important; }
+    
     .stApp { background-color: #0B0E11; }
     
     .hero-section {

@@ -1,12 +1,14 @@
 import streamlit as st
 from datetime import datetime, timedelta
 from decimal import Decimal
-from utils.auth import init_session_state, get_current_user, logout
+from utils.auth import init_session_state, get_current_user
 from utils.database import (
     get_user_savings_goals, create_savings_goal, 
     update_savings_goal, delete_savings_goal, 
     get_user_by_id, update_user_balance
 )
+from utils.theme import inject_theme
+from utils.sidebar import render_sidebar, check_auth
 
 st.set_page_config(
     page_title="Savings Goals - USDT Vault Pro",
@@ -14,66 +16,16 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
-<style>
-    .stApp { background-color: #0B0E11; }
-    .metric-card {
-        background: linear-gradient(135deg, #1E2329 0%, #2B3139 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #3C4452;
-        margin-bottom: 1rem;
-    }
-    .goal-title { color: #EAECEF; font-size: 1.25rem; font-weight: 600; }
-    .goal-amount { color: #F0B90B; font-family: 'Roboto Mono', monospace; font-size: 1.5rem; }
-    .progress-bar { background: #3C4452; border-radius: 4px; height: 10px; margin: 1rem 0; }
-    .progress-fill { background: linear-gradient(90deg, #F0B90B, #0ECB81); height: 100%; border-radius: 4px; }
-    h1, h2, h3 { color: #EAECEF; }
-    p { color: #848E9C; }
-    div[data-testid="stSidebar"] { background-color: #1E2329; }
-    .stButton > button {
-        background: linear-gradient(135deg, #F0B90B 0%, #C99E00 100%);
-        color: #0B0E11;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-    }
-    .delete-btn > button {
-        background: #F6465D;
-        color: white;
-    }
-</style>
-""", unsafe_allow_html=True)
+inject_theme()
 
 init_session_state()
 
-if not st.session_state.get('authenticated'):
-    st.switch_page("app.py")
+if not check_auth():
+    st.stop()
 
 user = get_current_user()
-if not user:
-    st.switch_page("app.py")
 
-with st.sidebar:
-    st.markdown(f"### 👤 {user['username'].title()}")
-    st.markdown(f"**Balance:** `${Decimal(user.get('balance', '0')):,.2f}`")
-    st.markdown("---")
-    
-    if st.button("📊 Dashboard", use_container_width=True):
-        st.switch_page("pages/1_Dashboard.py")
-    if st.button("🎯 Savings Goals", use_container_width=True):
-        pass
-    if st.button("💸 Transactions", use_container_width=True):
-        st.switch_page("pages/3_Transactions.py")
-    if st.button("📈 Investment Plans", use_container_width=True):
-        st.switch_page("pages/4_Investment_Plans.py")
-    if st.button("⚙️ Settings", use_container_width=True):
-        st.switch_page("pages/5_Settings.py")
-    
-    st.markdown("---")
-    if st.button("🚪 Logout", use_container_width=True):
-        logout()
-        st.switch_page("app.py")
+render_sidebar("savings_goals")
 
 st.markdown("# 🎯 Savings Goals")
 st.markdown("Set and track your USDT savings targets")
