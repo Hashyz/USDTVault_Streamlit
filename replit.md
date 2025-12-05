@@ -1,0 +1,93 @@
+# USDT Vault Pro - Python Streamlit Edition
+
+## Overview
+
+A secure USDT savings and portfolio management platform built with Python and Streamlit. This application enables users to manage their USDT holdings, track transactions, set savings goals, create investment plans, and monitor their financial progress through an intuitive dashboard.
+
+The platform is designed with a Binance-inspired dark theme featuring gold accent colors (#F0B90B) for a professional cryptocurrency experience.
+
+## Tech Stack
+
+- **Frontend/Backend**: Python 3.11 with Streamlit
+- **Database**: MongoDB (via PyMongo)
+- **Authentication**: bcrypt for password hashing
+- **Charts**: Plotly for interactive visualizations
+- **Data Processing**: Pandas for transaction analysis
+
+## Project Structure
+
+```
+├── app.py                    # Main entry point with login/register
+├── pages/
+│   ├── 1_Dashboard.py        # Main dashboard with stats and charts
+│   ├── 2_Savings_Goals.py    # Savings goals management
+│   ├── 3_Transactions.py     # Transaction history and deposits/withdrawals
+│   ├── 4_Investment_Plans.py # DCA investment plans
+│   └── 5_Settings.py         # Account settings and security
+├── utils/
+│   ├── __init__.py
+│   ├── database.py           # MongoDB connection and models
+│   └── auth.py               # Authentication helpers
+└── .streamlit/
+    └── config.toml           # Streamlit configuration
+```
+
+## Features
+
+### Completed Features
+- User authentication (login/register) with session state
+- Dashboard with balance display, stats cards, and balance chart
+- Savings goals with progress tracking, deposits, and withdrawals
+- Transaction history with deposit/withdraw functionality
+- Investment plans with DCA scheduling
+- Settings page with PIN protection
+- Demo account for testing
+- Binance-inspired dark theme with gold accents
+
+### Data Models
+
+**User**
+- username, password (hashed), wallet_address
+- balance, pin (hashed)
+- created_at timestamp
+
+**Transaction**
+- user_id, type (send/receive), amount
+- address, status, created_at
+
+**Savings Goal**
+- user_id, title, current, target
+- deadline, auto_save settings
+- saving_streak
+
+**Investment Plan**
+- user_id, name, amount, frequency
+- next_contribution, auto_invest flag
+
+## Setup Instructions
+
+1. Add your MongoDB connection string as a secret:
+   - Key: `MONGODB_URI`
+   - Value: Your MongoDB connection string
+
+2. The app will automatically start on port 5000
+
+## Demo Account
+
+- **Username**: `demo`
+- **Password**: `demo1234`
+- **PIN**: `123456`
+- **Initial Balance**: $12,548.75 USDT
+
+The demo account includes sample transactions, savings goals, and investment plans for testing.
+
+## Color Palette
+
+- **Primary Gold**: #F0B90B
+- **Background Dark**: #0B0E11
+- **Card Background**: #1E2329
+- **Input Background**: #2B3139
+- **Success Green**: #0ECB81
+- **Error Red**: #F6465D
+- **Text Primary**: #EAECEF
+- **Text Secondary**: #848E9C
