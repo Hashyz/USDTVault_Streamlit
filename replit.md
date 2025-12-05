@@ -29,10 +29,19 @@ The platform is designed with a Binance-inspired dark theme featuring gold accen
 │   ├── __init__.py
 │   ├── database.py           # MongoDB connection and models
 │   ├── auth.py               # Authentication helpers
-│   └── blockchain.py         # BSC blockchain read-only service
+│   ├── blockchain.py         # BSC blockchain read-only service
+│   ├── theme.py              # Shared CSS and styling (unified design system)
+│   └── sidebar.py            # Shared sidebar navigation component
 └── .streamlit/
     └── config.toml           # Streamlit configuration
 ```
+
+## UI/UX Architecture
+
+- **Unified Theme System**: All pages use `utils/theme.py` for consistent styling
+- **Shared Sidebar**: Navigation component in `utils/sidebar.py` with user info display
+- **No Duplicate Navigation**: Default Streamlit navigation hidden via CSS
+- **Consistent Components**: Metric cards, progress bars, and buttons styled uniformly
 
 ## Features
 
