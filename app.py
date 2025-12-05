@@ -336,56 +336,58 @@ else:
     qr_code_base64 = generate_qr_code(WALLET_ADDRESS)
     
     st.markdown(f"""
-    <div class="main-container">
-        <!-- Portfolio Card -->
-        <div class="portfolio-card">
-            <div class="username-badge">{WALLET_USERNAME}</div>
-            <div class="live-indicator">
-                <span class="live-dot"></span>Live from BSC
-            </div>
-            <div class="portfolio-label">Total Portfolio Value</div>
-            <div class="portfolio-value">${total_usd:.2f}</div>
-        </div>
-        
-        <!-- Balance Cards Row -->
-        <div class="balance-row">
-            <div class="balance-card">
-                <div class="balance-label">BNB BALANCE</div>
-                <div class="balance-amount">{bnb_balance:.4f}</div>
-                <div class="balance-token">BNB</div>
-            </div>
-            <div class="balance-card">
-                <div class="balance-label">USDT BALANCE</div>
-                <div class="balance-amount">${usdt_balance:.2f}</div>
-                <div class="balance-token">USDT (BEP20)</div>
-            </div>
-        </div>
-        
-        <!-- QR Code Section -->
-        <div class="qr-section">
-            <div class="qr-title">Send to this wallet</div>
-            <div class="qr-subtitle">Scan QR code or copy address below</div>
-            <div class="qr-container">
-                <img src="data:image/png;base64,{qr_code_base64}" width="180" height="180" alt="QR Code">
-            </div>
-            
-            <div class="address-section">
-                <div class="address-label">WALLET ADDRESS</div>
-                <div class="address-text">{WALLET_ADDRESS}</div>
-            </div>
-            
-            <div class="network-badge">BSC Network<br><span style="font-weight: 400; font-size: 10px;">(BEP20)</span></div>
-        </div>
-        
-        <!-- Footer Address Display -->
-        <div class="footer-address">
-            <div class="footer-address-text">{WALLET_ADDRESS}</div>
-        </div>
-        
-        <!-- Branding -->
-        <div class="branding">
-            <div class="branding-text">Powered by BSC</div>
-            <div class="branding-subtext">Binance Smart Chain Network</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+<div class="main-container">
+<div class="portfolio-card">
+<div class="username-badge">{WALLET_USERNAME}</div>
+<div class="live-indicator"><span class="live-dot"></span>Live from BSC</div>
+<div class="portfolio-label">Total Portfolio Value</div>
+<div class="portfolio-value">${total_usd:.2f}</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="balance-row">
+<div class="balance-card">
+<div class="balance-label">BNB BALANCE</div>
+<div class="balance-amount">{bnb_balance:.4f}</div>
+<div class="balance-token">BNB</div>
+</div>
+<div class="balance-card">
+<div class="balance-label">USDT BALANCE</div>
+<div class="balance-amount">${usdt_balance:.2f}</div>
+<div class="balance-token">USDT (BEP20)</div>
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="qr-section">
+<div class="qr-title">Send to this wallet</div>
+<div class="qr-subtitle">Scan QR code or copy address below</div>
+<div class="qr-container">
+<img src="data:image/png;base64,{qr_code_base64}" width="180" height="180" alt="QR Code">
+</div>
+<div class="address-section">
+<div class="address-label">WALLET ADDRESS</div>
+<div class="address-text">{WALLET_ADDRESS}</div>
+</div>
+<div class="network-badge">BSC Network<br><span style="font-weight: 400; font-size: 10px;">(BEP20)</span></div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+<div class="main-container">
+<div class="footer-address">
+<div class="footer-address-text">{WALLET_ADDRESS}</div>
+</div>
+<div class="branding">
+<div class="branding-text">Powered by BSC</div>
+<div class="branding-subtext">Binance Smart Chain Network</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
